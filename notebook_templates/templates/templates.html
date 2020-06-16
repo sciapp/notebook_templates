@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <p class="text-left">Available templates:</p>
+  <ul>
+  {% for template in templates %}
+    <li>{{ template }}</li>
+  {% endfor %}
+  </ul>
+{% endblock %}

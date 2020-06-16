@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form method="post" action="{{ url_for('.use_template', path=path) }}">
+  {{ form.csrf_token }}
+  <input type="hidden" value="{{ form.params.data }}" name="{{ form.params.name }}" />
+  <input type="hidden" value="{{ form.destination.data }}" name="{{ form.destination.name }}" />
+  <p>Do you want to create a new Jupyter Notebook at <span class="file_path">{{ destination['relative'] }}</span> using this template?</p>
+  <div class="button-container">
+    <button class="button" type="submit"><span>Create Notebook</span></button>
+  </div>
+</form>
+{% endblock %}
