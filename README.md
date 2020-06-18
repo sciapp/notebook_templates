@@ -7,4 +7,4 @@ To use the blueprint, you will need to set the `NOTEBOOK_TEMPLATE_DIR` and `NOTE
 - `handle_authentication`, which implements how users should authenticate themselves, similar to the `Authenticator` used by your JupyterHub, and
 - `get_jupyterhub_url_for_destination`, which builds URLs to notebooks in your JupyterHub.
 
-The `examples` folder contains example Flask apps using the blueprint to show how it could be used, including a minimal example (`minimal.py`) which can be run locally and does not require a JupyterHub instance to function.
+The `examples` folder contains example Flask apps using the blueprint to show how it could be used, including a minimal example (`minimal.py`) and an example letting users download the notebooks (`download.py`), which can both be run locally and do not require a JupyterHub instance to function.

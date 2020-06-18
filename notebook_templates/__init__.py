@@ -116,6 +116,16 @@ def use_template(path: str) -> typing.Any:
         )
     if jupyterhub_url:
         return flask.redirect(jupyterhub_url)
+    if 'data' in destination:
+        notebook_name = os.path.basename(destination['relative'])
+        return flask.Response(
+            destination['data'],
+            status=200,
+            headers={
+                'Content-Disposition': f'attachment; filename="{notebook_name}"',
+                'Content-Type': 'application/vnd.jupyter'
+            }
+        )
     return flask.render_template('instance_created.html')
 
 
