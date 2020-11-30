@@ -67,70 +67,8 @@ def index() -> typing.Any:
     )
 
 
-@notebook_templates.route("/t/<path:path>", methods=['post'])
+@notebook_templates.route("/t/<path:path>", methods=['GET', 'POST'])
 def use_template(path: str) -> typing.Any:
-    authentication_result = notebook_templates.handle_authentication()
-    if authentication_result is not None:
-        return authentication_result
-
-    if path not in flask.current_app.config['NOTEBOOK_TEMPLATES']:
-        raise NotebookTemplateError(
-            error_message='The requested template does not exist.',
-            error_code=12,
-            status_code=404
-        )
-
-    form = UseTemplateForm()
-
-    if not form.validate_on_submit():
-        raise NotebookTemplateError(
-            error_message='An error occurred while creating the notebook. Please try again in a few minutes.',
-            error_code=1
-        )
-
-    serializer = itsdangerous.TimedJSONWebSignatureSerializer(
-        secret_key=flask.current_app.config['SECRET_KEY'],
-        expires_in=30 * 60
-    )
-    try:
-        destination = serializer.loads(form.destination.data, salt='create_template_destination')
-        params = serializer.loads(form.params.data, salt='create_template_params')
-    except Exception:
-        raise NotebookTemplateError(
-            error_message='An error occured while creating the notebook. Please try again in a few minutes.',
-            error_code=2
-        )
-    try:
-        _create_template_instance(os.path.join(flask.current_app.config['NOTEBOOK_TEMPLATE_DIR'], path), destination, params)
-    except Exception:
-        raise NotebookTemplateError(
-            error_message='An error occured while creating the notebook. Please try again in a few minutes.',
-            error_code=11
-        )
-    try:
-        jupyterhub_url = notebook_templates.get_jupyterhub_url_for_destination(destination)
-    except Exception:
-        raise NotebookTemplateError(
-            error_message='The notebook was created successfully, but there was an error determining its JupyterHub URL.',
-            error_code=14
-        )
-    if jupyterhub_url:
-        return flask.redirect(jupyterhub_url)
-    if 'data' in destination:
-        notebook_name = os.path.basename(destination['relative'])
-        return flask.Response(
-            destination['data'],
-            status=200,
-            headers={
-                'Content-Disposition': f'attachment; filename="{notebook_name}"',
-                'Content-Type': 'application/vnd.jupyter'
-            }
-        )
-    return flask.render_template('instance_created.html')
-
-
-@notebook_templates.route("/t/<path:path>")
-def view_template(path: str) -> typing.Any:
 
     authentication_result = notebook_templates.handle_authentication()
     if authentication_result is not None:
@@ -147,10 +85,55 @@ def view_template(path: str) -> typing.Any:
         expires_in=30 * 60
     )
 
-    try:
-        params = json.loads(flask.request.args.get('params', '{}'))
-    except Exception:
-        params = {}
+    form = UseTemplateForm()
+    if form.validate_on_submit():
+        try:
+            destination = serializer.loads(form.destination.data, salt='create_template_destination')
+            params = serializer.loads(form.params.data, salt='create_template_params')
+        except Exception:
+            raise NotebookTemplateError(
+                error_message='An error occured while creating the notebook. Please try again in a few minutes.',
+                error_code=2
+            )
+        try:
+            _create_template_instance(os.path.join(flask.current_app.config['NOTEBOOK_TEMPLATE_DIR'], path), destination, params)
+        except Exception:
+            raise NotebookTemplateError(
+                error_message='An error occured while creating the notebook. Please try again in a few minutes.',
+                error_code=11
+            )
+        try:
+            jupyterhub_url = notebook_templates.get_jupyterhub_url_for_destination(destination)
+        except Exception:
+            raise NotebookTemplateError(
+                error_message='The notebook was created successfully, but there was an error determining its JupyterHub URL.',
+                error_code=14
+            )
+        if jupyterhub_url:
+            return flask.redirect(jupyterhub_url)
+        if 'data' in destination:
+            notebook_name = os.path.basename(destination['relative'])
+            return flask.Response(
+                destination['data'],
+                status=200,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{notebook_name}"',
+                    'Content-Type': 'application/vnd.jupyter'
+                }
+            )
+        return flask.render_template('instance_created.html')
+
+    params = {}
+    if 'params' in flask.request.form:
+        try:
+            params.update(json.loads(flask.request.form.get('params', '{}')))
+        except Exception:
+            pass
+    if 'params' in flask.request.args:
+        try:
+            params.update(json.loads(flask.request.args.get('params', '{}')))
+        except Exception:
+            pass
 
     try:
         relative_destination = path.format(**params)
@@ -169,7 +152,6 @@ def view_template(path: str) -> typing.Any:
             error_code=16
         )
 
-    form = UseTemplateForm()
     form.destination.data = serializer.dumps(
         destination,
         salt='create_template_destination'
