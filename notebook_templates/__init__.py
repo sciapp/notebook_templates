@@ -12,7 +12,7 @@ import typing
 
 import flask
 from flask_wtf import FlaskForm
-import itsdangerous
+import itsdangerous.url_safe
 from wtforms.fields import StringField
 
 
@@ -80,16 +80,15 @@ def use_template(path: str) -> typing.Any:
             error_code=13
         )
 
-    serializer = itsdangerous.TimedJSONWebSignatureSerializer(
-        secret_key=flask.current_app.config['SECRET_KEY'],
-        expires_in=30 * 60
+    serializer = itsdangerous.url_safe.URLSafeTimedSerializer(
+        secret_key=flask.current_app.config['SECRET_KEY']
     )
 
     form = UseTemplateForm()
     if form.validate_on_submit():
         try:
-            destination = serializer.loads(form.destination.data, salt='create_template_destination')
-            params = serializer.loads(form.params.data, salt='create_template_params')
+            destination = serializer.loads(form.destination.data, salt='create_template_destination', max_age=30 * 60)
+            params = serializer.loads(form.params.data, salt='create_template_params', max_age=30 * 60)
         except Exception:
             raise NotebookTemplateError(
                 error_message='An error occured while creating the notebook. Please try again in a few minutes.',
@@ -155,11 +154,11 @@ def use_template(path: str) -> typing.Any:
     form.destination.data = serializer.dumps(
         destination,
         salt='create_template_destination'
-    ).decode('utf-8')
+    )
     form.params.data = serializer.dumps(
         params,
         salt='create_template_params'
-    ).decode('utf-8')
+    )
     return flask.render_template(
         'confirm_instance_creation.html',
         path=path,
